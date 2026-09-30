@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Planning de comidas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F5F1;--surface:#FFFFFF;--ink:#1C2620;--muted:#5D6A62;--line:#D9E0DA;
+  --basil:#2E6A4B;--basil-soft:#E1EEE6;--saffron:#E3A514;--saffron-soft:#FAEDC6;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#111714;--surface:#19211D;--ink:#E6ECE8;--muted:#9AA79F;--line:#2A3530;
+    --basil:#72C197;--basil-soft:#1E3228;--saffron:#F0BC3C;--saffron-soft:#3A3119;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111714;--surface:#19211D;--ink:#E6ECE8;--muted:#9AA79F;--line:#2A3530;
+  --basil:#72C197;--basil-soft:#1E3228;--saffron:#F0BC3C;--saffron-soft:#3A3119;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--basil);outline-offset:2px}
+.wrap{max-width:1260px;margin:0 auto;padding:28px 20px 64px}
+h1,h2,h3{font-family:'Bricolage Grotesque','Figtree',system-ui,sans-serif;margin:0}
+
+/* Hero */
+.hero{display:grid;grid-template-columns:1fr auto;gap:28px;align-items:end;margin-bottom:28px}
+.hero h1{font-weight:800;font-size:clamp(2.1rem,5.5vw,3.6rem);line-height:.95;letter-spacing:-.025em}
+.hero p{margin:12px 0 0;color:var(--muted);max-width:52ch}
+.hero p strong{color:var(--ink);font-weight:700}
+.strip{display:flex;gap:8px;align-items:flex-end;height:132px;padding:0 4px}
+.bar{display:flex;flex-direction:column;align-items:center;gap:6px;width:34px}
+.bar .tube{position:relative;width:100%;height:96px;border-radius:9px 9px 5px 5px;background:var(--saffron-soft);overflow:hidden}
+.bar .fill{position:absolute;left:0;right:0;bottom:0;background:var(--saffron);transition:height .5s cubic-bezier(.3,.7,.2,1)}
+.bar .goal{position:absolute;left:-2px;right:-2px;height:2px;background:var(--ink);opacity:.55}
+.bar .d{font-size:.8rem;font-weight:700;color:var(--muted)}
+.bar.train .d{color:var(--basil)}
+@media (max-width:720px){.hero{grid-template-columns:1fr}.strip{justify-content:space-between}.bar{width:auto;flex:1}}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:272px minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}}
+aside{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;position:sticky;top:calc(16px + env(safe-area-inset-top,0px))}
+@media (max-width:900px){aside{position:static}}
+aside summary{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:1.25rem;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+aside summary::-webkit-details-marker{display:none}
+aside summary::after{content:"";width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-right:4px;transition:transform .2s}
+aside details[open] summary::after{transform:rotate(-135deg)}
+.field{margin-top:18px}
+.field > .lab{display:block;font-weight:700;font-size:.92rem;margin-bottom:8px}
+.hint{font-size:.83rem;color:var(--muted);margin:6px 0 0}
+.weight{display:flex;align-items:center;gap:8px}
+.weight input{width:88px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:8px 4px;font-size:.88rem;font-weight:600;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--basil);color:var(--surface)}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.days button{aspect-ratio:1;border:1px solid var(--line);border-radius:50%;background:transparent;font-weight:700;font-size:.85rem;color:var(--muted)}
+.days button[aria-pressed="true"]{background:var(--basil-soft);border-color:var(--basil);color:var(--basil)}
+.checks{display:flex;flex-wrap:wrap;gap:6px}
+.checks label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:.86rem;cursor:pointer;user-select:none}
+.checks input{position:absolute;opacity:0;pointer-events:none}
+.checks label:has(input:checked){border-color:var(--ink);background:var(--ink);color:var(--surface)}
+.checks label:has(input:focus-visible){outline:2px solid var(--basil);outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:9px;padding:11px 16px;font-weight:700;background:var(--basil);color:var(--surface)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.full{width:100%;margin-top:22px}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:20px;overflow-x:auto}
+.tabs button{border:0;background:none;padding:10px 14px;font-weight:700;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--basil)}
+.panel[hidden]{display:none}
+
+/* Week */
+.week{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.day{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 14px 6px}
+.dayhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.dayhead h3{font-size:1.2rem;font-weight:800;letter-spacing:-.01em}
+.chip{font-size:.75rem;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--basil-soft);color:var(--basil)}
+.meter{margin:10px 0 4px;height:6px;border-radius:99px;background:var(--saffron-soft);overflow:hidden}
+.meter span{display:block;height:100%;background:var(--saffron);border-radius:99px}
+.totals{font-size:.82rem;color:var(--muted);margin:0 0 6px}
+.totals b{color:var(--ink)}
+.meals{list-style:none;margin:0;padding:0}
+.meal{display:grid;grid-template-columns:1fr auto;gap:0 8px;padding:10px 0;border-top:1px solid var(--line)}
+.meal .slot{font-size:.76rem;font-weight:600;color:var(--muted)}
+.meal .slot.post{color:var(--basil)}
+.rname{grid-column:1;border:0;background:none;padding:0;text-align:left;font-weight:600;line-height:1.3}
+.rname:hover{text-decoration:underline;text-underline-offset:3px}
+.meal .meta{grid-column:1;font-size:.8rem;color:var(--muted)}
+.swap{grid-column:2;grid-row:1/4;align-self:center;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:transparent;display:grid;place-items:center;color:var(--muted)}
+.swap:hover{color:var(--basil);border-color:var(--basil)}
+.swap svg{width:16px;height:16px}
+.swap.spin svg{animation:spin .4s ease}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Shopping */
+.shophead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.shophead p{margin:0;color:var(--muted);font-size:.92rem}
+.shopgrid{columns:2 300px;column-gap:18px}
+.cat{break-inside:avoid;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:18px}
+.cat h3{font-size:1.05rem;font-weight:800;margin-bottom:6px}
+.cat .sub{font-size:.8rem;color:var(--muted);margin:-4px 0 6px}
+.item{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line);cursor:pointer}
+.item:first-of-type{border-top:0}
+.item input{width:18px;height:18px;accent-color:var(--basil);flex:none}
+.item .nm{flex:1}
+.item .q{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.item:has(input:checked) .nm,.item:has(input:checked) .q{color:var(--muted);text-decoration:line-through}
+
+/* Recipes */
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.filters button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 13px;font-weight:600;font-size:.88rem}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.rcard{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.rcard:hover{border-color:var(--basil)}
+.rcard .t{font-weight:700;line-height:1.3}
+.rcard .m{font-size:.84rem;color:var(--muted)}
+.pbadge{font-weight:800;color:var(--ink);background:var(--saffron-soft);border-radius:6px;padding:1px 7px;font-size:.84rem;align-self:flex-start}
+
+/* Switch */
+.switch{display:flex;gap:12px;align-items:flex-start;cursor:pointer}
+.switch input{position:absolute;opacity:0;pointer-events:none}
+.switch .track{flex:none;width:40px;height:24px;border-radius:99px;background:var(--line);position:relative;transition:background .2s;margin-top:1px}
+.switch .track::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--surface);transition:transform .2s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.switch input:checked + .track{background:var(--basil)}
+.switch input:checked + .track::after{transform:translateX(16px)}
+.switch input:focus-visible + .track{outline:2px solid var(--basil);outline-offset:2px}
+.switch .txt{font-size:.88rem;color:var(--muted);line-height:1.35}
+.switch .txt b{display:block;color:var(--ink);font-size:.92rem}
+
+/* Batch */
+.bintro{color:var(--muted);font-size:.92rem;margin:0 0 18px;max-width:70ch}
+.sessions{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;align-items:start}
+.session{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 18px 10px}
+.shead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.shead h3{font-size:1.45rem;font-weight:800;letter-spacing:-.015em}
+.shead .when{font-size:.88rem;color:var(--muted);width:100%;margin-top:2px}
+.shead .time{font-size:.82rem;font-weight:700;background:var(--saffron-soft);border-radius:6px;padding:2px 8px}
+.session h4{font-family:'Bricolage Grotesque',sans-serif;font-size:1rem;font-weight:800;margin:18px 0 4px}
+.session h4 small{font-family:'Figtree',sans-serif;font-weight:500;color:var(--muted);font-size:.8rem;margin-left:6px}
+.tup{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;padding:10px 0;border-top:1px solid var(--line)}
+.tup:first-of-type{border-top:0}
+.tup .n{grid-row:1/3;align-self:center;min-width:38px;height:38px;border-radius:10px;background:var(--basil-soft);color:var(--basil);font-weight:800;display:grid;place-items:center;font-size:.95rem}
+.tup .rname{grid-column:2}
+.tup .meta{grid-column:2;font-size:.8rem;color:var(--muted)}
+.task{padding:8px 0;border-top:1px solid var(--line)}
+.task:first-of-type{border-top:0}
+.task .how{font-size:.8rem;color:var(--muted)}
+.task ul{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:4px 14px}
+.task li{font-size:.9rem}
+.task li b{font-variant-numeric:tabular-nums}
+.fresh{font-size:.9rem;padding:7px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}
+.fresh:first-of-type{border-top:0}
+.fresh .d{color:var(--muted);font-size:.82rem;white-space:nowrap}
+.safety{margin:14px 0 8px;font-size:.82rem;color:var(--muted);border-left:3px solid var(--saffron);padding:2px 0 2px 10px}
+.empty{font-size:.9rem;color:var(--muted);margin:4px 0}
+.note{margin-top:14px;font-size:.88rem;background:var(--basil-soft);border-radius:10px;padding:10px 12px}
+
+/* Dialog */
+dialog{border:0;border-radius:16px;padding:0;max-width:540px;width:calc(100% - 28px);background:var(--surface);color:var(--ink);max-height:calc(100% - 40px)}
+dialog::backdrop{background:rgba(10,20,14,.45)}
+.dlg{padding:22px 22px 24px}
+.dlg header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.dlg h2{font-size:1.5rem;font-weight:800;line-height:1.1;letter-spacing:-.015em}
+.close{border:1px solid var(--line);background:transparent;border-radius:8px;width:34px;height:34px;flex:none;font-size:1.2rem;line-height:1}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
+.facts span{font-size:.85rem;padding:3px 10px;border-radius:999px;border:1px solid var(--line)}
+.facts span.p{background:var(--saffron-soft);border-color:transparent;font-weight:700}
+.dlg h3{font-size:1.02rem;font-weight:800;margin:18px 0 6px}
+.ing{list-style:none;margin:0;padding:0}
+.ing li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--line)}
+.ing li:first-child{border-top:0}
+.ing b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.steps{margin:0;padding-left:1.3em}
+.steps li{margin:6px 0}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:.92rem;transition:.25s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <div>
+      <h1>Tu semana<br>de comidas</h1>
+      <p id="heroText"></p>
+    </div>
+    <div class="strip" id="strip" aria-label="Proteína de cada día frente a tu objetivo"></div>
+  </section>
+
+  <div class="layout">
+    <aside>
+      <details id="settingsBox" open>
+        <summary>Ajustes</summary>
+        <div class="field">
+          <label class="lab" for="peso">Peso corporal</label>
+          <div class="weight"><input id="peso" type="number" min="40" max="160" step="1" inputmode="numeric"> kg</div>
+        </div>
+        <div class="field">
+          <span class="lab" id="objLab">Objetivo</span>
+          <div class="seg" role="group" aria-labelledby="objLab" id="goal"></div>
+          <p class="hint" id="goalHint"></p>
+        </div>
+        <div class="field">
+          <span class="lab" id="daysLab">Días de entreno</span>
+          <div class="days" role="group" aria-labelledby="daysLab" id="trainDays"></div>
+          <p class="hint">Esos días se añade un post-entreno.</p>
+        </div>
+        <div class="field">
+          <span class="lab">Evitar</span>
+          <div class="checks" id="excl"></div>
+        </div>
+        <div class="field">
+          <label class="switch"><input type="checkbox" id="batchToggle"><span class="track"></span><span class="txt"><b>Semana para batch cooking</b>Repite comidas y cenas para cocinar en dos sesiones.</span></label>
+        </div>
+        <button class="btn full" id="regen">Generar nueva semana</button>
+      </details>
+    </aside>
+
+    <main>
+      <div class="tabs" role="tablist">
+        <button role="tab" id="t-week" aria-controls="p-week" aria-selected="true">Semana</button>
+        <button role="tab" id="t-batch" aria-controls="p-batch" aria-selected="false">Batch cooking</button>
+        <button role="tab" id="t-shop" aria-controls="p-shop" aria-selected="false">Lista de la compra</button>
+        <button role="tab" id="t-rec" aria-controls="p-rec" aria-selected="false">Recetas</button>
+      </div>
+      <section class="panel" id="p-week" role="tabpanel" aria-labelledby="t-week"><div class="week" id="week"></div></section>
+      <section class="panel" id="p-batch" role="tabpanel" aria-labelledby="t-batch" hidden>
+        <p class="bintro">Dos sesiones de cocina: el domingo dejas hecho lo de lunes a miércoles y el miércoles por la tarde lo de jueves a domingo. Así nada pasa más de 4 días en la nevera.</p>
+        <div id="batchNote"></div>
+        <div class="sessions" id="sessions"></div>
+      </section>
+      <section class="panel" id="p-shop" role="tabpanel" aria-labelledby="t-shop" hidden>
+        <div class="shophead">
+          <p>Para 1 persona y 7 días, con tu ración ya aplicada. Marca lo que ya tengas.</p>
+          <div style="display:flex;gap:8px">
+            <button class="btn ghost" id="uncheck">Desmarcar todo</button>
+            <button class="btn" id="copy">Copiar lista</button>
+          </div>
+        </div>
+        <div class="shopgrid" id="shop"></div>
+      </section>
+      <section class="panel" id="p-rec" role="tabpanel" aria-labelledby="t-rec" hidden>
+        <div class="filters" id="rfilters"></div>
+        <div class="rgrid" id="recipes"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<dialog id="dlg" aria-labelledby="dlgTitle"><div class="dlg" id="dlgBody"></div></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ---------- Datos ---------- */
+const ING={
+  avena:{n:'Avena en copos',c:'Despensa',u:'g',tag:['gluten']},
+  leche:{n:'Leche semidesnatada',c:'Huevos y lácteos',u:'ml',tag:['lacteos']},
+  platano:{n:'Plátanos',c:'Fruta y verdura',u:'ud'},
+  cacahuete:{n:'Crema de cacahuete 100%',c:'Despensa',u:'g'},
+  pan:{n:'Pan integral',c:'Despensa',u:'g',tag:['gluten']},
+  huevo:{n:'Huevos',c:'Huevos y lácteos',u:'ud',tag:['huevo'],whole:true},
+  tomate:{n:'Tomates',c:'Fruta y verdura',u:'ud'},
+  aove:{n:'Aceite de oliva virgen extra',c:'Básicos',u:'ml'},
+  skyr:{n:'Skyr o yogur proteico natural',c:'Huevos y lácteos',u:'g',tag:['lacteos']},
+  frutosrojos:{n:'Frutos rojos',c:'Congelados',u:'g'},
+  granola:{n:'Granola sin azúcar añadido',c:'Despensa',u:'g',tag:['gluten']},
+  nueces:{n:'Nueces',c:'Despensa',u:'g'},
+  claras:{n:'Claras de huevo pasteurizadas',c:'Huevos y lácteos',u:'ml',tag:['huevo']},
+  quesobatido:{n:'Queso fresco batido 0%',c:'Huevos y lácteos',u:'g',tag:['lacteos']},
+  canela:{n:'Canela',c:'Básicos',u:'gusto'},
+  pavo:{n:'Pechuga de pavo en lonchas',c:'Carne y pescado',u:'g'},
+  quesofresco:{n:'Queso fresco tipo Burgos',c:'Huevos y lácteos',u:'g',tag:['lacteos']},
+  aguacate:{n:'Aguacates',c:'Fruta y verdura',u:'ud'},
+  whey:{n:'Proteína whey',c:'Despensa',u:'g',tag:['lacteos','whey']},
+  pollo:{n:'Pechuga de pollo',c:'Carne y pescado',u:'g'},
+  arroz:{n:'Arroz basmati',c:'Despensa',u:'g'},
+  cebolla:{n:'Cebollas',c:'Fruta y verdura',u:'ud'},
+  yogur:{n:'Yogur natural',c:'Huevos y lácteos',u:'g',tag:['lacteos']},
+  curry:{n:'Curry en polvo',c:'Básicos',u:'gusto'},
+  salmon:{n:'Salmón',c:'Carne y pescado',u:'g',tag:['pescado']},
+  patata:{n:'Patatas',c:'Fruta y verdura',u:'g'},
+  brocoli:{n:'Brócoli',c:'Fruta y verdura',u:'g'},
+  lentejas:{n:'Lentejas cocidas (bote)',c:'Despensa',u:'g'},
+  zanahoria:{n:'Zanahorias',c:'Fruta y verdura',u:'ud'},
+  pimiento:{n:'Pimientos rojos',c:'Fruta y verdura',u:'ud'},
+  pasta:{n:'Pasta integral',c:'Despensa',u:'g',tag:['gluten']},
+  atun:{n:'Atún al natural',c:'Despensa',u:'lata',tag:['pescado'],whole:true},
+  tomatetri:{n:'Tomate triturado',c:'Despensa',u:'g'},
+  ternera:{n:'Ternera en tiras',c:'Carne y pescado',u:'g'},
+  calabacin:{n:'Calabacines',c:'Fruta y verdura',u:'ud'},
+  soja:{n:'Salsa de soja',c:'Básicos',u:'gusto',tag:['gluten']},
+  quinoa:{n:'Quinoa',c:'Despensa',u:'g'},
+  garbanzos:{n:'Garbanzos cocidos (bote)',c:'Despensa',u:'g'},
+  cherry:{n:'Tomate cherry',c:'Fruta y verdura',u:'g'},
+  pepino:{n:'Pepinos',c:'Fruta y verdura',u:'ud'},
+  feta:{n:'Queso feta',c:'Huevos y lácteos',u:'g',tag:['lacteos']},
+  pavofilete:{n:'Filetes de pechuga de pavo',c:'Carne y pescado',u:'g'},
+  boniato:{n:'Boniato',c:'Fruta y verdura',u:'g'},
+  judias:{n:'Judías verdes',c:'Congelados',u:'g'},
+  merluza:{n:'Lomos de merluza',c:'Congelados',u:'g',tag:['pescado']},
+  limon:{n:'Limones',c:'Fruta y verdura',u:'ud'},
+  ensalada:{n:'Mezcla de lechugas',c:'Fruta y verdura',u:'g'},
+  dorada:{n:'Filetes de dorada',c:'Carne y pescado',u:'g',tag:['pescado']},
+  esparragos:{n:'Espárragos trigueros',c:'Fruta y verdura',u:'g'},
+  gambas:{n:'Gambas peladas',c:'Congelados',u:'g',tag:['pescado']},
+  champis:{n:'Champiñones',c:'Fruta y verdura',u:'g'},
+  ajo:{n:'Ajo',c:'Básicos',u:'gusto'},
+  picada:{n:'Carne picada de ternera magra',c:'Carne y pescado',u:'g'},
+  wrap:{n:'Tortillas integrales (wraps)',c:'Despensa',u:'ud',tag:['gluten'],whole:true},
+  manzana:{n:'Manzanas',c:'Fruta y verdura',u:'ud'},
+  almendras:{n:'Almendras',c:'Despensa',u:'g'},
+  miel:{n:'Miel',c:'Despensa',u:'g'},
+  especias:{n:'Sal, pimienta y especias',c:'Básicos',u:'gusto'}
+};
+
+const R=[
+ {id:'d1',n:'Porridge de avena con plátano y cacahuete',t:['desayuno'],min:8,p:21,k:540,ing:[['avena',60],['leche',250],['platano',1],['cacahuete',15],['canela',0]],s:['Calienta la leche con la avena a fuego medio 4–5 minutos, removiendo, hasta que espese.','Añade canela al gusto.','Sirve con el plátano en rodajas y la crema de cacahuete por encima.']},
+ {id:'d2',n:'Tostadas con huevos revueltos y tomate',t:['desayuno'],min:10,p:27,k:480,ing:[['pan',80],['huevo',3],['tomate',1],['aove',5],['especias',0]],s:['Tuesta el pan y ralla el tomate por encima.','Bate los huevos con sal y cuájalos a fuego bajo con el aceite, removiendo.','Monta los huevos sobre las tostadas.']},
+ {id:'d3',n:'Skyr con frutos rojos, granola y nueces',t:['desayuno'],min:3,p:31,k:490,ing:[['skyr',250],['frutosrojos',100],['granola',40],['nueces',15]],s:['Descongela los frutos rojos en el microondas 40 segundos o déjalos la noche anterior en la nevera.','Sirve el skyr con la fruta, la granola y las nueces troceadas.']},
+ {id:'d4',n:'Tortitas de avena y claras',t:['desayuno'],min:15,p:35,k:460,ing:[['avena',50],['claras',150],['platano',1],['quesobatido',150],['canela',0]],s:['Tritura avena, claras, plátano y canela hasta tener una masa lisa.','Cuaja tortitas pequeñas en sartén antiadherente, 1–2 minutos por lado.','Sirve con el queso fresco batido por encima.']},
+ {id:'d5',n:'Tostadas de pavo, queso fresco y aguacate',t:['desayuno'],min:5,p:32,k:465,ing:[['pan',80],['pavo',80],['quesofresco',60],['aguacate',0.5]],s:['Tuesta el pan.','Unta el aguacate machacado con una pizca de sal.','Cubre con el queso fresco en lonchas y el pavo.']},
+ {id:'d6',n:'Batido de avena, plátano y whey',t:['desayuno'],min:3,p:43,k:595,ing:[['leche',300],['whey',30],['avena',40],['platano',1],['cacahuete',15]],s:['Mete todo en la batidora y tritura 30–40 segundos.','Si lo quieres más frío, añade un par de cubitos de hielo.']},
+
+ {id:'c1',n:'Pollo al curry con arroz basmati',t:['comida'],min:25,p:49,k:620,ing:[['pollo',180],['arroz',80],['cebolla',0.5],['yogur',60],['curry',0],['aove',10]],s:['Cuece el arroz (unos 12 minutos) mientras preparas el pollo.','Sofríe la cebolla picada en el aceite, añade el pollo en dados y dóralo.','Agrega curry al gusto y, fuera del fuego, el yogur para hacer la salsa.','Sirve con el arroz.']},
+ {id:'c2',n:'Salmón al horno con patata y brócoli',t:['comida','cena'],min:35,p:43,k:680,ing:[['salmon',170],['patata',250],['brocoli',150],['aove',10],['limon',0.5]],s:['Hornea la patata en gajos con la mitad del aceite a 200 °C durante 15 minutos.','Añade el salmón y el brócoli a la bandeja con el resto del aceite.','Hornea 12–15 minutos más y termina con limón.']},
+ {id:'c3',n:'Lentejas salteadas con verduras y huevo duro',t:['comida'],min:20,p:37,k:560,ing:[['lentejas',250],['zanahoria',1],['pimiento',0.5],['huevo',2],['aove',10],['especias',0]],s:['Cuece los huevos 10 minutos.','Saltea la zanahoria y el pimiento picados en el aceite 6–8 minutos.','Añade las lentejas escurridas y lavadas, pimentón y comino, y calienta 3 minutos.','Sirve con los huevos en cuartos.']},
+ {id:'c4',n:'Pasta integral con atún y tomate',t:['comida'],min:15,p:42,k:560,ing:[['pasta',90],['atun',2],['tomatetri',150],['cebolla',0.5],['aove',5]],s:['Cuece la pasta según el paquete.','Pocha la cebolla en el aceite, añade el tomate y deja reducir 8 minutos.','Incorpora el atún escurrido y mezcla con la pasta.']},
+ {id:'c5',n:'Ternera salteada con verduras y arroz',t:['comida'],min:20,p:46,k:640,ing:[['ternera',170],['arroz',80],['pimiento',1],['calabacin',0.5],['soja',0],['aove',10]],s:['Cuece el arroz.','Saltea la ternera a fuego fuerte 2 minutos y resérvala.','Saltea las verduras en tiras, devuelve la ternera y añade un chorro de soja.','Sirve sobre el arroz.']},
+ {id:'c6',n:'Bowl de quinoa, pollo y garbanzos',t:['comida'],min:25,p:52,k:700,ing:[['quinoa',70],['pollo',130],['garbanzos',100],['cherry',100],['pepino',0.5],['feta',30],['aove',10]],s:['Lava la quinoa y cuécela 12–15 minutos.','Haz el pollo a la plancha y córtalo en tiras.','Monta el bowl con quinoa, garbanzos escurridos, tomate, pepino, pollo y feta; aliña con el aceite.']},
+ {id:'c7',n:'Pavo a la plancha con boniato y judías verdes',t:['comida'],min:30,p:50,k:540,ing:[['pavofilete',180],['boniato',250],['judias',150],['aove',10],['especias',0]],s:['Asa el boniato en dados a 200 °C unos 25 minutos (o 8 minutos al microondas).','Cuece las judías al vapor 6–8 minutos.','Haz el pavo a la plancha con el aceite y especias.']},
+ {id:'c8',n:'Merluza en papillote con arroz y verduras',t:['comida','cena'],min:25,p:42,k:540,ing:[['merluza',200],['arroz',70],['calabacin',0.5],['zanahoria',1],['limon',0.5],['aove',10]],s:['Cuece el arroz.','Pon las verduras en juliana sobre papel de horno, la merluza encima, limón, aceite y sal.','Cierra el paquete y hornea 15 minutos a 200 °C.']},
+
+ {id:'n1',n:'Tortilla de huevo y claras con ensalada',t:['cena'],min:10,p:30,k:400,ing:[['huevo',2],['claras',100],['ensalada',80],['tomate',1],['pan',40],['aove',5]],s:['Bate huevos y claras con sal y cuaja la tortilla francesa.','Acompaña con ensalada de lechuga y tomate y el pan.']},
+ {id:'n2',n:'Pollo a la plancha con verduras asadas',t:['cena'],min:30,p:41,k:390,ing:[['pollo',170],['calabacin',0.5],['pimiento',1],['cebolla',0.5],['aove',10],['especias',0]],s:['Asa las verduras troceadas con la mitad del aceite a 200 °C unos 20 minutos.','Haz el pollo a la plancha con el resto del aceite y especias.']},
+ {id:'n3',n:'Dorada al horno con espárragos trigueros',t:['cena'],min:25,p:40,k:470,ing:[['dorada',200],['esparragos',150],['patata',150],['aove',10],['limon',0.5]],s:['Hornea la patata en rodajas finas a 200 °C 10 minutos.','Añade la dorada y los espárragos, aceite y sal; hornea 10–12 minutos más.','Termina con limón.']},
+ {id:'n4',n:'Revuelto de gambas y champiñones',t:['cena'],min:12,p:48,k:450,ing:[['gambas',150],['champis',150],['huevo',2],['ajo',0],['pan',40],['aove',5]],s:['Saltea el ajo y los champiñones laminados en el aceite 5 minutos.','Añade las gambas y cocina 2 minutos.','Incorpora los huevos batidos y retira cuando estén cremosos. Acompaña con el pan.']},
+ {id:'n5',n:'Ensalada de atún, huevo y garbanzos',t:['cena','comida'],min:12,p:36,k:500,ing:[['ensalada',80],['atun',1],['huevo',2],['garbanzos',120],['tomate',1],['aove',10]],s:['Cuece los huevos 10 minutos (o ten unos cocidos de antemano).','Mezcla lechuga, tomate, garbanzos escurridos y atún.','Añade los huevos en cuartos y aliña.']},
+ {id:'n6',n:'Hamburguesa de ternera casera con ensalada',t:['cena'],min:15,p:40,k:430,ing:[['picada',170],['tomate',1],['ensalada',60],['pan',40],['aove',5],['especias',0]],s:['Sazona la carne, forma la hamburguesa y hazla a la plancha 3–4 minutos por lado.','Sirve con ensalada de tomate y el pan.']},
+ {id:'n7',n:'Wraps de pollo con queso fresco batido',t:['cena'],min:15,p:45,k:520,ing:[['wrap',2],['pollo',150],['ensalada',40],['tomate',1],['quesobatido',60],['especias',0]],s:['Haz el pollo a la plancha con especias y córtalo en tiras.','Calienta las tortillas en la sartén 20 segundos.','Unta el queso batido y rellena con pollo, lechuga y tomate.']},
+
+ {id:'s1',n:'Skyr con plátano',t:['snack'],min:1,p:22,k:235,ing:[['skyr',200],['platano',1]],s:['Sirve el skyr con el plátano en rodajas.']},
+ {id:'s2',n:'Queso batido con nueces y miel',t:['snack'],min:2,p:23,k:330,ing:[['quesobatido',250],['nueces',20],['miel',10]],s:['Sirve el queso batido con las nueces troceadas y un hilo de miel.']},
+ {id:'s3',n:'Batido de whey con leche y plátano',t:['snack'],min:2,p:33,k:330,ing:[['whey',30],['leche',250],['platano',1]],s:['Tritura todo 30 segundos.']},
+ {id:'s4',n:'Huevos duros, manzana y almendras',t:['snack'],min:12,p:17,k:330,ing:[['huevo',2],['manzana',1],['almendras',20]],s:['Cuece los huevos 10 minutos (puedes dejar varios hechos para la semana).','Acompaña con la manzana y las almendras.']},
+ {id:'s5',n:'Tostada de pavo y queso fresco',t:['snack'],min:3,p:22,k:220,ing:[['pan',40],['pavo',60],['quesofresco',40]],s:['Tuesta el pan y cubre con el queso fresco y el pavo.']}
+];
+R.forEach(r=>{r.tags=[...new Set(r.ing.flatMap(([k])=>ING[k].tag||[]))]});
+const RM=Object.fromEntries(R.map(r=>[r.id,r]));
+
+/* Batch cooking: qué se cocina entero y qué se hace en el día */
+const BT={d4:1,c1:1,c3:1,c4:1,c5:1,c6:1,c7:1,n2:1,n6:1,n7:1};
+const BN={
+  d4:'Guárdalas en tupper; se recalientan en 20 segundos en sartén o microondas.',
+  c1:'Guarda el curry y el arroz juntos en cada tupper.',
+  c3:'Guarda los huevos duros con cáscara y pélalos al comer.',
+  c6:'Guarda quinoa, pollo y garbanzos juntos; el tomate, el pepino y el feta mejor aparte y los añades al comer.',
+  c7:'El boniato y las judías aguantan bien recalentados; el pavo, mejor templado que muy caliente.',
+  n6:'Puedes guardarlas cocinadas o formarlas en crudo y congelarlas separadas con papel de horno.',
+  n7:'Guarda el pollo en tiras; los wraps se montan en el momento para que no se reblandezcan.'
+};
+const HD=['c3','n5','s4'];
+R.forEach(r=>{r.bt=BT[r.id]?'tupper':'dia';r.bn=BN[r.id]||'';r.hd=HD.includes(r.id)});
+const PREP={
+  arroz:'cereal',quinoa:'cereal',pasta:'cereal',
+  patata:'asar',boniato:'asar',
+  brocoli:'vapor',judias:'vapor',
+  calabacin:'cortar',pimiento:'cortar',cebolla:'cortar',zanahoria:'cortar',champis:'cortar',
+  ensalada:'lavar'
+};
+const TASKS=[
+  ['cereal','Cereales','Cuece y guarda en tupper en cuanto se temple. Cantidades en crudo.'],
+  ['huevos','Huevos duros','10 minutos de cocción y a la nevera con cáscara.'],
+  ['asar','Tubérculos','Ásalos o cuécelos enteros; al recalentar quedan bien.'],
+  ['vapor','Verdura al vapor','3–4 minutos, que queden firmes; terminan de hacerse al recalentar.'],
+  ['cortar','Verdura lavada y cortada','En tupper con papel de cocina para que no suelte agua.'],
+  ['lavar','Ensalada','Lava, centrifuga bien y guarda con papel de cocina.']
+];
+const SESSIONS=[
+  {name:'Domingo',when:'Para lunes, martes y miércoles',days:[0,1,2]},
+  {name:'Miércoles por la tarde',when:'Para jueves, viernes, sábado y domingo',days:[3,4,5,6]}
+];
+
+const DAYS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const DI=['L','M','X','J','V','S','D'];
+const SLOTS=[
+ {k:'desayuno',label:'Desayuno',type:'desayuno'},
+ {k:'comida',label:'Comida',type:'comida'},
+ {k:'merienda',label:'Merienda',type:'snack'},
+ {k:'post',label:'Post-entreno',type:'snack',train:true},
+ {k:'cena',label:'Cena',type:'cena'}
+];
+const GOALS={
+ def:{label:'Definición',g:2.0,f:0.9},
+ mant:{label:'Mantener',g:1.8,f:1},
+ vol:{label:'Volumen',g:1.8,f:1.2}
+};
+const EXCL=[['pescado','Pescado y marisco'],['lacteos','Lácteos'],['huevo','Huevo'],['gluten','Gluten'],['whey','Proteína en polvo']];
+const CATS=['Carne y pescado','Huevos y lácteos','Fruta y verdura','Congelados','Despensa','Básicos'];
+const KEY='planning-comidas-v1';
+
+/* ---------- Estado ---------- */
+let state=null, warned=new Set(), recFilter='todas';
+function load(){try{const s=localStorage.getItem(KEY);return s?JSON.parse(s):null}catch(e){return null}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+
+function pool(type){
+  const ex=state.settings.excl;
+  let p=R.filter(r=>r.t.includes(type)&&!r.tags.some(t=>ex.includes(t)));
+  if(!p.length){p=R.filter(r=>r.t.includes(type));
+    if(!warned.has(type)){warned.add(type);toast('Ninguna receta de '+(type==='snack'?'snack':type)+' cumple todos los filtros; se usan las disponibles.')}}
+  return p;
+}
+function usage(plan){const u={};plan.forEach(d=>d&&Object.values(d).forEach(id=>{u[id]=(u[id]||0)+1}));return u}
+function pick(type,avoid,plan){
+  const p=pool(type);
+  let c=p.filter(r=>!avoid.includes(r.id)); if(!c.length)c=p;
+  const u=usage(plan); const min=Math.min(...c.map(r=>u[r.id]||0));
+  const best=c.filter(r=>(u[r.id]||0)===min);
+  return best[Math.floor(Math.random()*best.length)].id;
+}
+function slotsFor(d){return SLOTS.filter(s=>!s.train||state.settings.train.includes(d))}
+function generate(){
+  const plan=[];
+  for(let d=0;d<7;d++){
+    const day={}; plan.push(day);
+    for(const s of slotsFor(d)){
+      const prev=d>0?plan[d-1][s.k]:null;
+      day[s.k]=pick(s.type,[prev,...Object.values(day)].filter(Boolean),plan);
+    }
+  }
+  if(state.settings.batch)applyBatch(plan);
+  state.plan=plan; state.checked={};
+}
+function applyBatch(plan){
+  const used=[];
+  const tp=type=>{const p=pool(type);const t=p.filter(r=>r.bt==='tupper');return t.length?t:p};
+  const choose=(list,avoid)=>{let c=list.filter(r=>!avoid.includes(r.id));if(!c.length)c=list;return c[Math.floor(Math.random()*c.length)].id};
+  for(const se of SESSIONS){
+    const cA=choose(tp('comida'),used);
+    const cB=choose(tp('comida'),[...used,cA]);
+    const nA=choose(tp('cena'),[...used,cA,cB]);
+    const nB=choose(pool('cena'),[...used,cA,cB,nA]);
+    se.days.forEach((d,i)=>{plan[d].comida=i%2?cB:cA;plan[d].cena=i%2?nB:nA});
+    used.push(cA,cB,nA,nB);
+  }
+}
+function reconcile(){
+  const ex=state.settings.excl;
+  state.plan.forEach((day,d)=>{
+    for(const s of SLOTS){
+      const active=!s.train||state.settings.train.includes(d);
+      if(!active){delete day[s.k];continue}
+      const r=day[s.k]&&RM[day[s.k]];
+      if(!r||r.tags.some(t=>ex.includes(t))){
+        const others=Object.entries(day).filter(([k])=>k!==s.k).map(([,v])=>v);
+        day[s.k]=pick(s.type,others,state.plan);
+      }
+    }
+  });
+}
+
+/* ---------- Utilidades ---------- */
+const nf=x=>x.toLocaleString('es-ES',{maximumFractionDigits:1});
+const factor=()=>GOALS[state.settings.goal].f;
+const target=()=>Math.round(state.settings.peso*GOALS[state.settings.goal].g);
+function fmtQty(q,key,shop){
+  const i=ING[key],u=i.u;
+  if(u==='gusto')return 'al gusto';
+  if(u==='g'||u==='ml'){
+    const step=shop?10:5; q=shop?Math.ceil(q/step)*step:Math.max(step,Math.round(q/step)*step);
+    if(q>=1000)return nf(Math.round(q/100)/10)+(u==='g'?' kg':' l');
+    return q+' '+u;
+  }
+  let r=shop||i.whole?Math.max(1,shop?Math.ceil(q-0.001):Math.round(q)):Math.max(.5,Math.round(q*2)/2);
+  const whole=Math.floor(r), half=r%1?'½':'';
+  const s=(whole?whole+(half?' ':''):'')+half;
+  const unit=u==='ud'?'ud':(r>1?u+'s':u);
+  return s+' '+unit;
+}
+function dayTotals(d){
+  const f=factor();let p=0,k=0;
+  Object.values(state.plan[d]).forEach(id=>{p+=RM[id].p*f;k+=RM[id].k*f});
+  return {p:Math.round(p),k:Math.round(k/10)*10};
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+let tt;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2600)}
+
+/* ---------- Render ---------- */
+const swapIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/></svg>';
+
+function renderSettings(){
+  document.getElementById('peso').value=state.settings.peso;
+  document.getElementById('goal').innerHTML=Object.entries(GOALS).map(([k,g])=>`<button data-goal="${k}" aria-pressed="${state.settings.goal===k}">${g.label}</button>`).join('');
+  const g=GOALS[state.settings.goal];
+  document.getElementById('goalHint').textContent=`${nf(g.g)} g de proteína por kg y raciones al ${Math.round(g.f*100)} %.`;
+  document.getElementById('trainDays').innerHTML=DI.map((d,i)=>`<button data-train="${i}" aria-pressed="${state.settings.train.includes(i)}" aria-label="${DAYS[i]}">${d}</button>`).join('');
+  document.getElementById('batchToggle').checked=!!state.settings.batch;
+  document.getElementById('excl').innerHTML=EXCL.map(([k,l])=>`<label><input type="checkbox" data-excl="${k}" ${state.settings.excl.includes(k)?'checked':''}>${l}</label>`).join('');
+}
+function renderHero(){
+  const t=target(); const tots=DAYS.map((_,d)=>dayTotals(d));
+  const avg=Math.round(tots.reduce((a,b)=>a+b.p,0)/7);
+  const low=tots.filter(x=>x.p<t*0.9).length;
+  document.getElementById('heroText').innerHTML=`Objetivo: <strong>${t} g de proteína al día</strong>. Esta semana llevas una media de <strong>${avg} g</strong>`+(low?`; ${low===1?'hay un día':'hay '+low+' días'} por debajo del 90 %, cambia alguna receta para subirlo.`:'.');
+  const max=1.35;
+  document.getElementById('strip').innerHTML=tots.map((x,d)=>{
+    const h=Math.min(x.p/t,max)/max*100, g=1/max*100;
+    return `<div class="bar ${state.settings.train.includes(d)?'train':''}" title="${DAYS[d]}: ${x.p} g"><div class="tube"><div class="fill" style="height:${h}%"></div><div class="goal" style="bottom:${g}%"></div></div><span class="d">${DI[d]}</span></div>`;
+  }).join('');
+}
+function renderWeek(){
+  const f=factor(),t=target();
+  document.getElementById('week').innerHTML=state.plan.map((day,d)=>{
+    const tot=dayTotals(d); const train=state.settings.train.includes(d);
+    const meals=slotsFor(d).map(s=>{const r=RM[day[s.k]];return `<li class="meal"><span class="slot ${s.train?'post':''}">${s.label}</span><button class="rname" data-open="${r.id}">${esc(r.n)}</button><span class="meta">${Math.round(r.p*f)} g proteína, ${Math.round(r.k*f/10)*10} kcal</span><button class="swap" data-swap="${d}|${s.k}" aria-label="Cambiar ${s.label.toLowerCase()} del ${DAYS[d].toLowerCase()}">${swapIcon}</button></li>`}).join('');
+    return `<article class="day"><div class="dayhead"><h3>${DAYS[d]}</h3>${train?'<span class="chip">Entreno</span>':''}</div><div class="meter"><span style="width:${Math.min(100,tot.p/t*100)}%"></span></div><p class="totals"><b>${tot.p} / ${t} g</b> proteína, ${tot.k} kcal aprox.</p><ul class="meals">${meals}</ul></article>`;
+  }).join('');
+}
+function shopData(){
+  const f=factor(),sum={};
+  state.plan.forEach(day=>Object.values(day).forEach(id=>RM[id].ing.forEach(([k,q])=>{sum[k]=(sum[k]||0)+q*f})));
+  const byCat={};Object.keys(sum).forEach(k=>{(byCat[ING[k].c]=byCat[ING[k].c]||[]).push(k)});
+  Object.values(byCat).forEach(a=>a.sort((x,y)=>ING[x].n.localeCompare(ING[y].n,'es')));
+  return {sum,byCat};
+}
+function renderShop(){
+  const {sum,byCat}=shopData();
+  document.getElementById('shop').innerHTML=CATS.filter(c=>byCat[c]).map(c=>`<div class="cat"><h3>${c==='Básicos'?'Básicos de despensa':c}</h3>${c==='Básicos'?'<p class="sub">Comprueba si te quedan.</p>':''}${byCat[c].map(k=>`<label class="item"><input type="checkbox" data-check="${k}" ${state.checked[k]?'checked':''}><span class="nm">${ING[k].n}</span><span class="q">${ING[k].u==='gusto'?'':fmtQty(sum[k],k,true)}</span></label>`).join('')}</div>`).join('');
+}
+function renderRecipes(){
+  const types=[['todas','Todas'],['desayuno','Desayunos'],['comida','Comidas'],['cena','Cenas'],['snack','Snacks']];
+  document.getElementById('rfilters').innerHTML=types.map(([k,l])=>`<button data-rf="${k}" aria-pressed="${recFilter===k}">${l}</button>`).join('');
+  const ex=state.settings.excl,f=factor();
+  const list=R.filter(r=>(recFilter==='todas'||r.t.includes(recFilter))&&!r.tags.some(t=>ex.includes(t)));
+  document.getElementById('recipes').innerHTML=list.length?list.map(r=>`<button class="rcard" data-open="${r.id}"><span class="t">${esc(r.n)}</span><span class="pbadge">${Math.round(r.p*f)} g proteína</span><span class="m">${Math.round(r.k*f/10)*10} kcal, ${r.min} min</span></button>`).join(''):'<p>No hay recetas de este tipo con tus filtros actuales. Quita alguna restricción en Ajustes.</p>';
+}
+function joinEs(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' y '+a[a.length-1]}
+function fmtMin(m){if(m<60)return m+' min';const h=Math.floor(m/60),r=m%60;return h+' h'+(r?' '+r+' min':'')}
+function renderBatch(){
+  const f=factor();
+  document.getElementById('batchNote').innerHTML=state.settings.batch?'':'<p class="note" style="margin:0 0 18px">Ahora mismo tu semana es variada y casi cada plato es distinto, así que las sesiones salen largas. Activa «Semana para batch cooking» en Ajustes para repetir comidas y cenas y cocinar menos.</p>';
+  document.getElementById('sessions').innerHTML=SESSIONS.map((se,si)=>{
+    const tup={},dia=[],base={};let eggs=0;
+    se.days.forEach(d=>slotsFor(d).forEach(s=>{
+      const r=RM[state.plan[d][s.k]];
+      if(r.bt==='tupper'){(tup[r.id]=tup[r.id]||[]).push(DAYS[d].toLowerCase()+' ('+s.label.toLowerCase()+')');return}
+      if(s.type==='comida'||s.type==='cena')dia.push({d,s,r});
+      r.ing.forEach(([k,q])=>{const t=PREP[k];if(t){base[t]=base[t]||{};base[t][k]=(base[t][k]||0)+q*f}});
+      if(r.hd){const e=r.ing.find(x=>x[0]==='huevo');if(e)eggs+=Math.max(1,Math.round(e[1]*f))}
+    }));
+    const tupIds=Object.keys(tup).sort((a,b)=>tup[b].length-tup[a].length);
+    const mins=Math.round((tupIds.reduce((a,id)=>a+RM[id].min,0)*0.7+Object.keys(base).length*6+(eggs?4:0))/5)*5;
+    const tupHtml=tupIds.length?tupIds.map(id=>{const n=tup[id].length;return `<div class="tup"><span class="n">×${n}</span><button class="rname" data-open="${id}" data-n="${n}">${esc(RM[id].n)}</button><span class="meta">${joinEs(tup[id])}</span></div>`}).join(''):'<p class="empty">No hay platos completos que dejar hechos para estos días.</p>';
+    const tasks=TASKS.map(([k,label,how])=>{
+      let items='';
+      if(k==='huevos'){if(!eggs)return '';items=`<li>Huevos <b>${eggs} ud</b></li>`}
+      else{if(!base[k])return '';items=Object.entries(base[k]).map(([ik,q])=>`<li>${ING[ik].n} <b>${fmtQty(q,ik,true)}</b></li>`).join('')}
+      return `<div class="task"><b>${label}</b><div class="how">${how}</div><ul>${items}</ul></div>`;
+    }).join('');
+    const diaHtml=dia.sort((a,b)=>a.d-b.d).map(x=>`<div class="fresh"><button class="rname" data-open="${x.r.id}">${esc(x.r.n)}</button><span class="d">${DAYS[x.d]}, ${x.s.label.toLowerCase()}</span></div>`).join('');
+    return `<article class="session"><div class="shead"><h3>${se.name}</h3>${mins?`<span class="time">≈ ${fmtMin(mins)}</span>`:''}<span class="when">${se.when}</span></div>
+      <h4>Platos completos en tupper</h4>${tupHtml}
+      ${tasks?`<h4>Bases que dejar hechas<small>para lo que se termina en el día</small></h4>${tasks}`:''}
+      ${diaHtml?`<h4>Se terminan en el día<small>10–20 min con las bases hechas</small></h4>${diaHtml}`:''}
+      <p class="safety">Mete los tuppers en la nevera en cuanto se templen (antes de 2 horas) y el pescado, mejor cocinado en el día.${si===1?' Lo del domingo llega a 4 días: si prefieres, congela esa ración y pásala a la nevera el sábado.':''}</p>
+    </article>`;
+  }).join('');
+}
+function renderAll(){renderHero();renderWeek();renderBatch();renderShop();renderRecipes();save()}
+
+function openRecipe(id,n){
+  n=n||1;const r=RM[id],f=factor();
+  document.getElementById('dlgBody').innerHTML=`<header><h2 id="dlgTitle">${esc(r.n)}</h2><button class="close" data-close aria-label="Cerrar">×</button></header>
+  <div class="facts"><span class="p">${Math.round(r.p*f)} g proteína</span><span>${Math.round(r.k*f/10)*10} kcal</span><span>${r.min} min</span>${n>1?`<span>Cantidades para ${n} raciones</span>`:''}</div>
+  <h3>Ingredientes</h3><ul class="ing">${r.ing.map(([k,q])=>`<li><span>${ING[k].n}</span><b>${fmtQty(q*f*n,k,false)}</b></li>`).join('')}</ul>
+  <h3>Preparación</h3><ol class="steps">${r.s.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>${r.bt==='tupper'?`<p class="note"><b>Para dejarlo hecho:</b> ${esc(r.bn||'Aguanta 3–4 días en la nevera en tupper cerrado.')}</p>`:''}`;
+  document.getElementById('dlg').showModal();
+}
+
+/* ---------- Eventos ---------- */
+document.addEventListener('click',e=>{
+  const el=e.target.closest('button,[data-close]');
+  if(e.target.id==='dlg'){e.target.close();return}
+  if(!el)return;
+  if(el.dataset.open){openRecipe(el.dataset.open,+el.dataset.n||1);return}
+  if(el.hasAttribute('data-close')){document.getElementById('dlg').close();return}
+  if(el.dataset.swap){
+    const [d,k]=el.dataset.swap.split('|');const day=state.plan[+d];const s=SLOTS.find(x=>x.k===k);
+    day[k]=pick(s.type,Object.values(day),state.plan);
+    renderAll();
+    const b=document.querySelector(`[data-swap="${d}|${k}"]`);if(b){b.classList.add('spin');b.focus()}
+    return;
+  }
+  if(el.dataset.goal){state.settings.goal=el.dataset.goal;renderSettings();renderAll();return}
+  if(el.dataset.train!==undefined){
+    const i=+el.dataset.train,a=state.settings.train;
+    state.settings.train=a.includes(i)?a.filter(x=>x!==i):[...a,i].sort();
+    reconcile();renderSettings();renderAll();return;
+  }
+  if(el.dataset.rf){recFilter=el.dataset.rf;renderRecipes();return}
+  if(el.getAttribute('role')==='tab'){
+    document.querySelectorAll('[role=tab]').forEach(t=>{const on=t===el;t.setAttribute('aria-selected',on);document.getElementById(t.getAttribute('aria-controls')).hidden=!on});
+    return;
+  }
+  if(el.id==='regen'){warned.clear();generate();renderAll();toast('Semana nueva generada');return}
+  if(el.id==='uncheck'){state.checked={};renderShop();save();return}
+  if(el.id==='copy'){copyList();return}
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.excl){
+    const k=t.dataset.excl;state.settings.excl=t.checked?[...state.settings.excl,k]:state.settings.excl.filter(x=>x!==k);
+    warned.clear();reconcile();renderAll();return;
+  }
+  if(t.id==='batchToggle'){state.settings.batch=t.checked;warned.clear();generate();renderAll();toast(t.checked?'Semana regenerada para batch cooking':'Semana regenerada con más variedad');return}
+  if(t.dataset.check){if(t.checked)state.checked[t.dataset.check]=true;else delete state.checked[t.dataset.check];save();return}
+  if(t.id==='peso'){
+    const v=Math.round(+t.value);if(v>=40&&v<=160){state.settings.peso=v;renderAll()}else{t.value=state.settings.peso;toast('Introduce un peso entre 40 y 160 kg')}
+  }
+});
+function copyList(){
+  const {sum,byCat}=shopData();let txt='Lista de la compra\n';
+  CATS.filter(c=>byCat[c]).forEach(c=>{
+    const items=byCat[c].filter(k=>!state.checked[k]);if(!items.length)return;
+    txt+='\n'+(c==='Básicos'?'Básicos (revisar)':c)+'\n'+items.map(k=>'- '+ING[k].n+(ING[k].u==='gusto'?'':': '+fmtQty(sum[k],k,true))).join('\n')+'\n';
+  });
+  const done=()=>toast('Lista copiada, sin lo que ya tienes marcado');
+  const fallback=()=>{const ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done()}catch(e){toast('No se pudo copiar. Selecciona la lista manualmente.')}ta.remove()};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,fallback)}else fallback();
+}
+
+/* ---------- Inicio ---------- */
+(function init(){
+  const s=load();
+  if(s&&s.v===1&&Array.isArray(s.plan)&&s.plan.length===7&&s.plan.every(d=>Object.values(d).every(id=>RM[id]))){state=s;state.settings.batch=!!state.settings.batch}
+  else{state={v:1,settings:{peso:75,goal:'mant',train:[0,1,3,4],excl:[],batch:false},plan:[],checked:{}};generate()}
+  if(window.matchMedia&&window.matchMedia('(max-width:900px)').matches&&s)document.getElementById('settingsBox').open=false;
+  renderSettings();renderAll();
+})();
+</script>
+</body>
+</html>
